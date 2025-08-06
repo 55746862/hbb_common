@@ -1,4 +1,4 @@
-use std::{
+use使用std::{}{
     collections::{HashMap, HashSet},
     fs,
     io::{Read, Write},
@@ -19,51 +19,53 @@ use serde_json;
 use sodiumoxide::base64;
 use sodiumoxide::crypto::sign;
 
-use crate::{
-    compress::{compress, decompress},
-    log,
-    password_security::{
-        decrypt_str_or_original, decrypt_vec_or_original, encrypt_str_or_original,
-        encrypt_vec_or_original, symmetric_crypt,
-    },
-};
+use使用 crate::{crate::{
+    压缩::{压缩, 解压},{compress, decompress},
+    日志log,
+    密码安全::{{
+        解密字符串或原始值, 解密向量或原始值, 加密字符串或原始值,decrypt_str_or_original, decrypt_vec_or_original, encrypt_str_or_original,
+        加密向量或原始数据，对称加密encrypt_vec_or_original, symmetric_crypt,
+    }},
+}}
 
-pub const RENDEZVOUS_TIMEOUT: u64 = 12_000;
-pub const CONNECT_TIMEOUT: u64 = 18_000;
-pub const READ_TIMEOUT: u64 = 18_000;
+pub常量定义： pub const RENDEZVOUS_TIMEOUT: u64 = 12_000;const RENDEZVOUS_TIMEOUT: u64 = 12_000;
+pub常量定义： pub const CONNECT_TIMEOUT: u64 = 18_000;const CONNECT_TIMEOUT: u64 = 18_000;
+pubpub const READ_TIMEOUT: u64 = 18_000;const READ_TIMEOUT: u64 = 18_000;
 // https://github.com/quic-go/quic-go/issues/525#issuecomment-294531351
 // https://datatracker.ietf.org/doc/html/draft-hamilton-early-deployment-quic-00#section-6.10
 // 15 seconds is recommended by quic, though oneSIP recommend 25 seconds,
 // https://www.onsip.com/voip-resources/voip-fundamentals/what-is-nat-keepalive
-pub const REG_INTERVAL: i64 = 15_000;
-pub const COMPRESS_LEVEL: i32 = 3;
-const SERIAL: i32 = 3;
-const PASSWORD_ENC_VERSION: &str = "00";
-pub const ENCRYPT_MAX_LEN: usize = 128; // used for password, pin, etc, not for all
+pubpub const REG_INTERVAL: i64 = 15_000;const REG_INTERVAL: i64 = 15_000;
+pub常量定义： pub const COMPRESS_LEVEL: i32 = 3;const COMPRESS_LEVEL: i32 = 3;
+const常量 SERIAL: i32 = 3;SERIAL: i32 = 3;
+const常量 PASSWORD_ENC_VERSION: &str = "00";PASSWORD_ENC_VERSION: &str = "00";
+pub```rust
+pub const ENCRYPT_MAX_LEN: usize = 128; // 用于密码、PIN 等，不用于所有情况
+```const ENCRYPT_MAX_LEN: usize = 128; // used for password, pin, etc, not for all
 
 #[cfg(target_os = "macos")]
-lazy_static::lazy_static! {
-    pub static ref ORG: RwLock<String> = RwLock::new("com.carriez".to_owned());
+lazy_static!{{
+    pub static ref ORG: RwLock("com.carriez".to_owned());
 }
 
-type Size = (i32, i32, i32, i32);
-type KeyPair = (Vec<u8>, Vec<u8>);
+type类型 Size = (i32, i32, i32, i32);(i32, i32, i32, i32);
+type类型 KeyPair = (Vec(Vec<u8>, Vec<u8>);
 
-lazy_static::lazy_static! {
-    static ref CONFIG: RwLock<Config> = RwLock::new(Config::load());
-    static ref CONFIG2: RwLock<Config2> = RwLock::new(Config2::load());
-    static ref LOCAL_CONFIG: RwLock<LocalConfig> = RwLock::new(LocalConfig::load());
-    static ref STATUS: RwLock<Status> = RwLock::new(Status::load());
-    static ref TRUSTED_DEVICES: RwLock<(Vec<TrustedDevice>, bool)> = Default::default();
-    static ref ONLINE: Mutex<HashMap<String, i64>> = Default::default();
-    pub static ref PROD_RENDEZVOUS_SERVER: RwLock<String> = RwLock::new("".to_owned());
-    pub static ref EXE_RENDEZVOUS_SERVER: RwLock<String> = Default::default();
-    pub static ref APP_NAME: RwLock<String> = RwLock::new("RustDesk".to_owned());
-    static ref KEY_PAIR: Mutex<Option<KeyPair>> = Default::default();
-    static ref USER_DEFAULT_CONFIG: RwLock<(UserDefaultConfig, Instant)> = RwLock::new((UserDefaultConfig::load(), Instant::now()));
-    pub static ref NEW_STORED_PEER_CONFIG: Mutex<HashSet<String>> = Default::default();
-    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+lazy_static!{{
+    静态引用CONFIG: RwLock(Config::load());
+    静态引用CONFIG2: RwLock(Config2::load());
+    静态引用 LOCAL_CONFIG: RwLock(LocalConfig::load());
+    静态引用STATUS: RwLock(Status::load());
+    静态引用 TRUSTED_DEVICES: RwLock<(Vec(Vec<TrustedDevice>, bool)> = Default::default();
+    静态引用 ONLINE: Mutex();
+    pub static ref PROD_RENDEZVOUS_SERVER: RwLock("".to_owned());
+    pub static ref EXE_RENDEZVOUS_SERVER: RwLock();
+    pub static ref APP_NAME: RwLock("RustDesk".to_owned());
+    静态引用 KEY_PAIR: Mutex();
+    静态引用USER_DEFAULT_CONFIG: RwLock<(UserDefaultConfig, Instant)> = RwLock::new((UserDefaultConfig::load(), Instant::now()));(UserDefaultConfig, Instant)> = RwLock::new((UserDefaultConfig::load(), Instant::now()));
+    pub static ref NEW_STORED_PEER_CONFIG: Mutex();
+    pub static ref DEFAULT.Settings: RwLock();
+    pub static ref OVERWRITE_SETTINGS: RwLock();
     pub static ref DEFAULT_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
@@ -100,8 +102,8 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-pub const RENDEZVOUS_SERVERS: &[&str] = &["180.76.114.81"];
-pub const RS_PUB_KEY: &str = "qbJuwqOJeo8R2sjlSIxOIKKAcYwOnSMkDjRA3UWtVX0=";
+pub const RENDEZVOUS_SERVERS: &[&str] = &["服务器IP"];
+pub const RS_PUB_KEY: &str = "修改key";
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
